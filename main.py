@@ -6,21 +6,6 @@ from typing import List, TextIO
 import finder
 
 
-def read_board(f: TextIO) -> List[List[str]]:
-    """Creates a game board from a text file."""
-    board = []
-    for i, line in enumerate(f.readlines()):
-        row = list(line.rstrip('\n'))
-        if i > 0 and len(row) != len(board[i - 1]):
-            raise ValueError(f'size of the row {i} differs from the row {i - 1}')
-        board.append(row)
-
-    if len(board) != len(board[0]):
-        raise ValueError('the board is not square')
-
-    return board
-
-
 if __name__ == '__main__':
     filename = sys.argv[1]
     try:
@@ -29,11 +14,11 @@ if __name__ == '__main__':
         processes_num = multiprocessing.cpu_count() * 2
 
     with open(filename, 'r') as f:
-        board = read_board(f)
-        n = len(board)
+        # Get the lines count.
+        n = sum(1 for _ in f)
         if processes_num == 1:
             print('Processing in 1 process')
-            print(finder.find_in_board(board))
+            print(finder.find_in_board(filename))
         else:
             found_event = multiprocessing.Event()
             found_result = multiprocessing.Queue(maxsize=1)
@@ -45,7 +30,7 @@ if __name__ == '__main__':
                 last_row = i * chunk_size + chunk_size + (finder.FRAME_SIZE - 1)
                 p = multiprocessing.Process(
                     target=finder.find_in_board,
-                    args=(board[first_row:last_row], found_event, found_result, first_row))
+                    args=(filename, first_row, last_row, found_event, found_result))
                 processes.append(p)
 
             print(f'Starting {len(processes)} processes')
@@ -56,7 +41,6 @@ if __name__ == '__main__':
                 p.join()
 
             if found_event.is_set():
-                # TODO: returned position is relative to the board that was given to the worker. Fix it.
                 print(found_result.get())
             else:
                 print('No winning combination found.')

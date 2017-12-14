@@ -38,15 +38,30 @@ def find_in_frame(board: BoardType) -> bool:
     return False
 
 
-def find_in_board(board: BoardType,
+def read_board(filename: str, line_start=0, line_end=None) -> List[List[str]]:
+    """Creates a game board from a text file."""
+    with open(filename) as f:
+        board = []
+        for i, line in enumerate(f.readlines()):
+            if i < line_start:
+                continue
+            if line_end is not None and i >= line_end:
+                break
+            row = list(line.rstrip('\n'))
+            board.append(row)
+
+    return board
+
+
+def find_in_board(filename: str, line_start=0, line_end=None,
                   found_event: Union[Event, None] = None,
-                  result: multiprocessing.Queue = None,
-                  offset=0) -> Union[Tuple[Tuple[int, int], BoardType], None]:
+                  result: multiprocessing.Queue = None) -> Union[Tuple[Tuple[int, int], BoardType], None]:
     """Find winning combinations in a board of any size by moving a frame and looking for them there.
 
     Returns:
         Position of the winning combination and a frame if any.
     """
+    board = read_board(filename, line_start, line_end)
     n = len(board)
 
     for i in range(n - FRAME_SIZE):
@@ -59,6 +74,6 @@ def find_in_board(board: BoardType,
                 if found_event is not None:
                     found_event.set()
                 if result is not None:
-                    result.put(((i + offset, j), frame))
-                return (i + offset, j), frame
+                    result.put(((i + line_start, j), frame))
+                return (i + line_start, j), frame
     return None
